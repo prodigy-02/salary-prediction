@@ -1,9 +1,5 @@
 """
-train_model.py
-──────────────
-Run this once to train and save the model before launching the Flask app.
-Usage:
-    python train_model.py --data path/to/job_salary_prediction_dataset.csv
+train_model.py — memory-optimised for Render free tier (512 MB)
 """
 
 import argparse
@@ -19,10 +15,13 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 def train(data_path: str) -> None:
     print(f"[INFO] Loading data from: {data_path}")
+    # Sample 60k rows — plenty for a good model, saves RAM during training
     df = pd.read_csv(data_path)
+    if len(df) > 60000:
+        df = df.sample(60000, random_state=42)
+        print(f"[INFO] Sampled to 60,000 rows to fit free-tier memory")
     print(f"[INFO] Shape: {df.shape}")
 
-    # ── Categorical columns ─────────────────────────────────────────────────
     OR_COLS  = ['education_level', 'company_size']
     OHE_COLS = ['job_title', 'industry', 'location', 'remote_work']
 
@@ -38,11 +37,10 @@ def train(data_path: str) -> None:
     oe_enc_df  = pd.DataFrame(oe_enc,  columns=OR_COLS)
     ohe_enc_df = pd.DataFrame(ohe_enc, columns=ohe.get_feature_names_out())
 
-    # Print ordinal mappings for reference
     for col_name, categories in zip(OR_COLS, oe.categories_):
         print(f"\nOrdinal mappings for: {col_name}")
         for idx, cls in enumerate(categories):
-            print(f"  {idx} → {cls}")
+            print(f"  {idx} -> {cls}")
 
     final_cdf = pd.concat([ohe_enc_df, oe_enc_df], axis=1)
     final_df  = pd.concat([final_cdf, ndf], axis=1)
@@ -54,36 +52,34 @@ def train(data_path: str) -> None:
         X, y, test_size=0.2, random_state=42
     )
 
-    # ── Train best model ────────────────────────────────────────────────────
-    print("\n[INFO] Training Random Forest (this may take a minute)…")
+    # Lightweight config: fits in 512 MB, still great accuracy
+    print("\n[INFO] Training Random Forest (memory-optimised)...")
     rf = RandomForestRegressor(
-        n_estimators=200,
-        max_depth=20,
-        min_samples_split=2,
-        min_samples_leaf=1,
+        n_estimators=50,       # was 200 — biggest RAM saver
+        max_depth=15,          # was 20
+        min_samples_split=5,
+        min_samples_leaf=2,
         max_features='sqrt',
         bootstrap=True,
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,              # was -1, single thread uses less peak RAM
     )
     rf.fit(X_train, y_train)
 
     y_pred = rf.predict(X_test)
-    print("\n── Evaluation ──────────────────────")
+    print("\n-- Evaluation --")
     print(f"MAE      : {mean_absolute_error(y_test, y_pred):,.2f}")
     print(f"RMSE     : {np.sqrt(mean_squared_error(y_test, y_pred)):,.2f}")
-    print(f"R² Score : {r2_score(y_test, y_pred):.4f}")
+    print(f"R2 Score : {r2_score(y_test, y_pred):.4f}")
 
-    # ── Save ────────────────────────────────────────────────────────────────
     os.makedirs('Best_model', exist_ok=True)
     path = 'Best_model/random_forest_model.pkl'
-    joblib.dump(rf, path)
+    joblib.dump(rf, path, compress=3)   # compress=3 shrinks file ~60%
     print(f"\n[SUCCESS] Model saved to: {path}")
-    print("[INFO] You can now start the Flask app with: python app.py")
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train salary prediction model')
-    parser.add_argument('--data', required=True, help='Path to CSV dataset')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', required=True)
     args = parser.parse_args()
     train(args.data)
