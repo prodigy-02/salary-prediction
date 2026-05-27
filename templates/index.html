@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalaryIQ — Employee Salary Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+  <!-- ── BACKGROUND CANVAS ── -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-mark">◈</span>
+      <span class="logo-text">SalaryIQ</span>
+    </div>
+    <div class="header-badge">ML-Powered · Random Forest</div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <p class="hero-eyebrow">Predict · Benchmark · Plan</p>
+    <h1 class="hero-title">What's Your<br/><em>Market Worth?</em></h1>
+    <p class="hero-sub">
+      Enter your profile and get an instant data-driven salary estimate
+      powered by a tuned Random Forest model trained on global tech compensation data.
+    </p>
+    
+  </section>
+
+  <!-- ── MAIN FORM ── -->
+  <main class="main-wrapper">
+    <form id="salary-form" novalidate>
+
+      <!-- Row 1: Role & Industry -->
+      <div class="form-grid">
+        <div class="field-group" data-delay="0">
+          <label for="job_title">Job Title</label>
+          <div class="select-wrap">
+            <select id="job_title" name="job_title" required>
+              <option value="" disabled selected>Select role…</option>
+              {% for t in job_titles %}
+              <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+            <span class="chevron">↓</span>
+          </div>
+        </div>
+
+        <div class="field-group" data-delay="1">
+          <label for="industry">Industry</label>
+          <div class="select-wrap">
+            <select id="industry" name="industry" required>
+              <option value="" disabled selected>Select industry…</option>
+              {% for i in industries %}
+              <option value="{{ i }}">{{ i }}</option>
+              {% endfor %}
+            </select>
+            <span class="chevron">↓</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Location & Remote -->
+      <div class="form-grid">
+        <div class="field-group" data-delay="2">
+          <label for="location">Location</label>
+          <div class="select-wrap">
+            <select id="location" name="location" required>
+              <option value="" disabled selected>Select country…</option>
+              {% for l in locations %}
+              <option value="{{ l }}">{{ l }}</option>
+              {% endfor %}
+            </select>
+            <span class="chevron">↓</span>
+          </div>
+        </div>
+
+        <div class="field-group" data-delay="3">
+          <label for="remote_work">Remote Work</label>
+          <div class="radio-pill-group" id="remote_work">
+            {% for r in remote_options %}
+            <label class="pill">
+              <input type="radio" name="remote_work" value="{{ r }}" {% if loop.first %}checked{% endif %} />
+              <span>{{ r }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Education & Company Size -->
+      <div class="form-grid">
+        <div class="field-group" data-delay="4">
+          <label for="education_level">Education</label>
+          <div class="select-wrap">
+            <select id="education_level" name="education_level" required>
+              <option value="" disabled selected>Select level…</option>
+              {% for e in education_levels %}
+              <option value="{{ e }}">{{ e }}</option>
+              {% endfor %}
+            </select>
+            <span class="chevron">↓</span>
+          </div>
+        </div>
+
+        <div class="field-group" data-delay="5">
+          <label for="company_size">Company Size</label>
+          <div class="select-wrap">
+            <select id="company_size" name="company_size" required>
+              <option value="" disabled selected>Select size…</option>
+              {% for s in company_sizes %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+            <span class="chevron">↓</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 4: Numerical sliders -->
+      <div class="form-grid form-grid-3">
+
+        <div class="field-group slider-group" data-delay="6">
+          <label for="experience_years">Experience <span id="exp-val" class="val-badge">0 yrs</span></label>
+          <input type="range" id="experience_years" name="experience_years"
+                 min="0" max="30" step="1" value="0" />
+          <div class="range-labels"><span>0</span><span>30</span></div>
+        </div>
+
+        <div class="field-group slider-group" data-delay="7">
+          <label for="skills_count">Skills <span id="skills-val" class="val-badge">0</span></label>
+          <input type="range" id="skills_count" name="skills_count"
+                 min="0" max="20" step="1" value="0" />
+          <div class="range-labels"><span>0</span><span>20</span></div>
+        </div>
+
+        <div class="field-group slider-group" data-delay="8">
+          <label for="certifications">Certifications <span id="cert-val" class="val-badge">0</span></label>
+          <input type="range" id="certifications" name="certifications"
+                 min="0" max="10" step="1" value="0" />
+          <div class="range-labels"><span>0</span><span>10</span></div>
+        </div>
+
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-row">
+        <button type="submit" class="predict-btn" id="predict-btn">
+          <span class="btn-label">Predict Salary</span>
+          <span class="btn-icon">→</span>
+        </button>
+      </div>
+
+    </form>
+
+    <!-- ── RESULT PANEL ── -->
+    <div id="result-panel" class="result-panel hidden">
+      <div class="result-inner">
+        <p class="result-eyebrow">Estimated Annual Salary</p>
+        <div class="result-amount" id="result-amount">—</div>
+        <p class="result-note">
+          Based on your profile across global tech compensation data.
+          Actual salaries vary by company, negotiation, and benefits.
+        </p>
+        <button class="reset-btn" id="reset-btn">← Try another profile</button>
+      </div>
+      <!-- decorative rings -->
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+    </div>
+
+    <!-- ── ERROR PANEL ── -->
+    <div id="error-panel" class="error-panel hidden">
+      <span class="error-icon">⚠</span>
+      <span id="error-msg">Something went wrong.</span>
+    </div>
+
+  </main>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <p>Built with Flask · Scikit-learn · Random Forest &nbsp;|&nbsp; <span id="health-dot" class="dot dot--checking"></span> <span id="health-text">Checking service…</span></p>
+  </footer>
+
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
