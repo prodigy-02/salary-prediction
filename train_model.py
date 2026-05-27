@@ -20,7 +20,8 @@ def train(data_path: str) -> None:
     if len(df) > 60000:
         df = df.sample(60000, random_state=42)
         print(f"[INFO] Sampled to 60,000 rows to fit free-tier memory")
-    print(f"[INFO] Shape: {df.shape}")
+    df = df.dropna()
+    print(f"[INFO] Shape after dropna: {df.shape}")
 
     OR_COLS  = ['education_level', 'company_size']
     OHE_COLS = ['job_title', 'industry', 'location', 'remote_work']
